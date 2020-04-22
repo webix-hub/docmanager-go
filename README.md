@@ -1,39 +1,46 @@
 Backed for Webix Document Manager
 ==================
 
-### How to build
+### How to start
+
+- create db
+- create config.yml with DB access config
+
+```yaml
+db:
+  host: localhost
+  port: 3306
+  user: root
+  password: 1
+  database: files
+```
+
+- start the backend
 
 ```shell script
 go build
-```
-
-
-### How to start
-
-Normal start
-```shell script
 ./wfs-ls -data path/to/file/storage
 ```
 
-Readonly mode
+#### Readonly mode
 
 ```shell script
 ./wfs-ls -readonly -data path/to/file/storage
 ```
 
-Set upload limit
+#### Set upload limit
 
 ```shell script
 ./wfs-ls -upload 50000000 -data path/to/file/storage
 ```
 
-Use external preview generator
+#### Use external preview generator
 
 ```shell script
 ./wfs-ls -preview http://localhost:3201 -data path/to/file/storage
 ```
 
-### Other ways of configuration
+#### Other ways of configuration
 
 - config.yml in the app's folder
 
