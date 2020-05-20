@@ -14,6 +14,7 @@ type TagInfo struct {
 	ID    int    `json:"id"`
 	Name  string `json:"name"`
 	Value string `json:"value"`
+	Color string `json:"color"`
 }
 
 type UserInfo struct {
@@ -45,7 +46,7 @@ func dbID(id string) (res int) {
 func addExtrasRoutes(r chi.Router) {
 	r.Get("/tags/all", func(w http.ResponseWriter, r *http.Request) {
 		info := make([]TagInfo, 0)
-		conn.Select(&info, "select id, name, value from tag")
+		conn.Select(&info, "select id, name, value, color from tag")
 
 		format.JSON(w, 200, info)
 	})
@@ -72,6 +73,19 @@ func addExtrasRoutes(r chi.Router) {
 		}
 
 		format.JSON(w, 200, Response{ID: id})
+	})
+
+	r.Post("/tags", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		name := r.Form.Get("name")
+		color := r.Form.Get("color")
+
+		value := strings.ReplaceAll(name, " ", "")
+
+		res, _ := conn.Exec("INSERT INTO tag (name, value, color) VALUES (?, ?, ?)", name, value, color)
+
+		cid, _ := res.LastInsertId()
+		format.JSON(w, 200, Response{ID: strconv.FormatInt(cid, 10)})
 	})
 
 	r.Get("/users/all", func(w http.ResponseWriter, r *http.Request) {
