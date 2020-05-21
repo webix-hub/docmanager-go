@@ -102,6 +102,8 @@ func addExtrasRoutes(r chi.Router) {
 		id := chi.URLParam(r, "id")
 
 		conn.Exec("DELETE FROM tag WHERE id = ?", id)
+		conn.Exec("DELETE FROM entity_tag WHERE tag_id = ?", id)
+
 		format.JSON(w, 200, Response{ID: id})
 	})
 
