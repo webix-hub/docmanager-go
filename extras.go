@@ -79,13 +79,30 @@ func addExtrasRoutes(r chi.Router) {
 		r.ParseForm()
 		name := r.Form.Get("name")
 		color := r.Form.Get("color")
-
 		value := strings.ReplaceAll(name, " ", "")
 
 		res, _ := conn.Exec("INSERT INTO tag (name, value, color) VALUES (?, ?, ?)", name, value, color)
 
 		cid, _ := res.LastInsertId()
 		format.JSON(w, 200, Response{ID: strconv.FormatInt(cid, 10)})
+	})
+
+	r.Put("/tags/{id}", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		id := chi.URLParam(r, "id")
+		name := r.Form.Get("name")
+		color := r.Form.Get("color")
+		value := strings.ReplaceAll(name, " ", "")
+
+		conn.Exec("UPDATE tag SET name = ?, value = ?, color = ? WHERE id = ?", name, value, color, id)
+		format.JSON(w, 200, Response{ID: id})
+	})
+
+	r.Delete("/tags/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+
+		conn.Exec("DELETE FROM tag WHERE id = ?", id)
+		format.JSON(w, 200, Response{ID: id})
 	})
 
 	r.Get("/users/all", func(w http.ResponseWriter, r *http.Request) {
