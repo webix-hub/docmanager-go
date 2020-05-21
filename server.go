@@ -29,6 +29,7 @@ type Response struct {
 	Invalid bool   `json:"invalid"`
 	Error   string `json:"error"`
 	ID      string `json:"id"`
+	Value   string `json:"value"`
 }
 
 type FSFeatures struct {
