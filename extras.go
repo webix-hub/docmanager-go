@@ -83,8 +83,8 @@ func addExtrasRoutes(r chi.Router) {
 
 		res, _ := conn.Exec("INSERT INTO tag (name, value, color) VALUES (?, ?, ?)", name, value, color)
 
-		cid, _ := res.LastInsertId()
-		format.JSON(w, 200, Response{ID: strconv.FormatInt(cid, 10), Value: value})
+		tid, _ := res.LastInsertId()
+		format.JSON(w, 200, TagInfo{ID: int(tid), Name: name, Value: value, Color: color})
 	})
 
 	r.Put("/tags/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -95,7 +95,8 @@ func addExtrasRoutes(r chi.Router) {
 		value := strings.ReplaceAll(name, " ", "")
 
 		conn.Exec("UPDATE tag SET name = ?, value = ?, color = ? WHERE id = ?", name, value, color, id)
-		format.JSON(w, 200, Response{ID: id})
+		tid, _ := strconv.Atoi(id)
+		format.JSON(w, 200, TagInfo{ID: tid, Name: name, Value: value, Color: color})
 	})
 
 	r.Delete("/tags/{id}", func(w http.ResponseWriter, r *http.Request) {
