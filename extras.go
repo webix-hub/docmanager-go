@@ -35,6 +35,14 @@ type CurrentUser struct {
 	Root int
 }
 
+type EditInfo struct {
+	ID       int       `json:"id"`
+	Content  string    `json:"name"`
+	Modified time.Time `json:"date"`
+	User     int       `json:"user"`
+	Origin   time.Time `json:"origin"`
+}
+
 var User = CurrentUser{1, 1}
 
 func dbID(id string) (res int) {
@@ -170,5 +178,15 @@ func addExtrasRoutes(r chi.Router) {
 
 		conn.Exec("delete from comment WHERE id = ?", id)
 		format.JSON(w, 200, Response{ID: id})
+	})
+
+	r.Get("/versions", func(w http.ResponseWriter, r *http.Request) {
+		id := r.URL.Query().Get("id")
+		did := dbID(id)
+
+		versions := make([]EditInfo, 0)
+		conn.Select(&versions, "select id,content,modified,user_id,origin from entity_edit where entity_id = ?", did)
+
+		format.JSON(w, 200, versions)
 	})
 }

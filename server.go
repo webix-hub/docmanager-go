@@ -63,6 +63,16 @@ type DBConfig struct {
 
 var Config AppConfig
 
+type Edit struct {
+	Name    string `json:"value"`
+	ID      string `json:"id"`
+	Size    int64  `json:"size"`
+	Date    int64  `json:"date"`
+	Type    string `json:"type"`
+	Content string `json:"content"`
+	Origin  int64  `json:"origin"`
+}
+
 func main() {
 	flag.StringVar(&Config.DataFolder, "data", "", "location of data folder")
 	flag.StringVar(&Config.Preview, "preview", "", "url of preview generation service")
@@ -300,12 +310,12 @@ func main() {
 			panic("id not provided")
 		}
 
-		err := drive.Write(id, strings.NewReader(content))
+		err = drive.Write(id, strings.NewReader(content))
 		if err != nil {
 			panic(err)
 		}
 
-		info, _ := drive.Info(id)
+		info, _ := saveVersion("select entity.* from entity where path = ?", id)
 
 		format.JSON(w, 200, info)
 	})
@@ -383,4 +393,23 @@ func handleUpload(w http.ResponseWriter, r *http.Request, makeNew bool) {
 
 	info, err := drive.Info(fileID)
 	format.JSON(w, 200, info)
+}
+
+func saveVersion(sql string, args ...interface{}) (*wfs.File, error) {
+	var data db.DBFile
+
+	err := conn.Get(&data, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	out := &wfs.File{ID: data.Path, Name: data.FileName, Date: data.LastModTime.Unix(), Size: data.FileSize, Type: wfs.GetType(data.FileName, data.IsDir())}
+
+	_, err = conn.Exec("insert into entity_edit(entity_id, content, user_id, origin) values(?, ?, ?, ?)", data.ID, data.Content, User.Root, data.LastModTime)
+
+	if err != nil {
+		return out, err
+	}
+
+	return out, nil
 }
