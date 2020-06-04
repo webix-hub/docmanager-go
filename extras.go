@@ -1,7 +1,10 @@
 package main
 
 import (
+	"errors"
+	"io"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -188,5 +191,17 @@ func addExtrasRoutes(r chi.Router) {
 		conn.Select(&versions, "SELECT id,content,modified,user_id,origin FROM entity_edit WHERE entity_id = ? ORDER BY modified desc", did)
 
 		format.JSON(w, 200, versions)
+	})
+
+	r.Get("/versions/{version}", func(w http.ResponseWriter, r *http.Request) {
+		content := chi.URLParam(r, "version")
+
+		data, err := os.Open(filepath.Join(Config.DataFolder, content))
+		if err != nil {
+			panic(errors.New("Can't open file for reading"))
+		}
+
+		w.Header().Add("Content-type", "text/plain")
+		io.Copy(w, data)
 	})
 }
