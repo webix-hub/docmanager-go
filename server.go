@@ -405,7 +405,7 @@ func saveVersion(sql string, args ...interface{}) (*wfs.File, error) {
 
 	out := &wfs.File{ID: data.Path, Name: data.FileName, Date: data.LastModTime.Unix(), Size: data.FileSize, Type: wfs.GetType(data.FileName, data.IsDir())}
 
-	_, err = conn.Exec("insert into entity_edit(entity_id, content, user_id, origin) values(?, ?, ?, ?)", data.ID, data.Content, User.Root, data.LastModTime)
+	_, err = conn.Exec("INSERT INTO entity_edit(entity_id, content, user_id, origin) VALUES(?, ?, ?, ?)", data.ID, data.Content, User.Root, data.LastModTime)
 
 	if err != nil {
 		return out, err

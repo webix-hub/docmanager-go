@@ -39,7 +39,7 @@ type EditInfo struct {
 	ID       int       `json:"id"`
 	Content  string    `json:"name"`
 	Modified time.Time `json:"date"`
-	User     int       `json:"user"`
+	User     int       `db:"user_id" json:"user"`
 	Origin   time.Time `json:"origin"`
 }
 
@@ -185,7 +185,7 @@ func addExtrasRoutes(r chi.Router) {
 		did := dbID(id)
 
 		versions := make([]EditInfo, 0)
-		conn.Select(&versions, "select id,content,modified,user_id,origin from entity_edit where entity_id = ?", did)
+		conn.Select(&versions, "SELECT id,content,modified,user_id,origin FROM entity_edit WHERE entity_id = ? ORDER BY modified desc", did)
 
 		format.JSON(w, 200, versions)
 	})

@@ -122,7 +122,6 @@ func getFromQuery(sql string, args ...interface{}) ([]wfs.File, error) {
 
 	out := make([]wfs.File, len(data))
 	for i, d := range data {
-		log.Println(d.Content)
 		out[i] = wfs.File{ID: d.Path, Name: d.FileName, Date: d.LastModTime.Unix(), Size: d.FileSize, Type: wfs.GetType(d.FileName, d.IsDir())}
 	}
 
