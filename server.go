@@ -391,7 +391,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request, makeNew bool) {
 		return
 	}
 
-	info, err := drive.Info(fileID)
+	info, err := saveVersion("select entity.* from entity where path = ?", fileID)
 	format.JSON(w, 200, info)
 }
 
