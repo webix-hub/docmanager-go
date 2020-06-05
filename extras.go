@@ -40,10 +40,8 @@ type CurrentUser struct {
 
 type EditInfo struct {
 	ID       int       `json:"id"`
-	Content  string    `json:"name"`
 	Modified time.Time `json:"date"`
 	User     int       `db:"user_id" json:"user"`
-	Origin   time.Time `json:"origin"`
 }
 
 var User = CurrentUser{1, 1}
@@ -188,13 +186,16 @@ func addExtrasRoutes(r chi.Router) {
 		did := dbID(id)
 
 		versions := make([]EditInfo, 0)
-		conn.Select(&versions, "SELECT id,content,modified,user_id,origin FROM entity_edit WHERE entity_id = ? ORDER BY modified desc", did)
+		conn.Select(&versions, "SELECT id,modified,user_id FROM entity_edit WHERE entity_id = ? ORDER BY modified desc", did)
 
 		format.JSON(w, 200, versions)
 	})
 
-	r.Get("/versions/{version}", func(w http.ResponseWriter, r *http.Request) {
-		content := chi.URLParam(r, "version")
+	r.Get("/versions/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+
+		var content string
+		conn.Get(&content, "SELECT content FROM entity_edit WHERE id = ?", id)
 
 		data, err := os.Open(filepath.Join(Config.DataFolder, content))
 		if err != nil {
