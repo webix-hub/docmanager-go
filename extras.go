@@ -191,7 +191,7 @@ func addExtrasRoutes(r chi.Router) {
 		format.JSON(w, 200, versions)
 	})
 
-	r.Get("/versions/{id}", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/versions/{mode}/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 
 		var content string
@@ -202,7 +202,14 @@ func addExtrasRoutes(r chi.Router) {
 			panic(errors.New("Can't open file for reading"))
 		}
 
-		w.Header().Add("Content-type", "text/plain")
-		io.Copy(w, data)
+		mode := chi.URLParam(r, "mode")
+		if mode == "text" {
+			w.Header().Add("Content-type", "text/plain")
+			io.Copy(w, data)
+		} else if mode == "binary" {
+			disposition := "inline"
+			w.Header().Set("Content-Disposition", disposition+"; filename=\""+content+"\"")
+			http.ServeContent(w, r, "", time.Now(), data)
+		}
 	})
 }
