@@ -405,9 +405,14 @@ func saveVersion(sql string, args ...interface{}) (*wfs.File, error) {
 
 	out := &wfs.File{ID: data.Path, Name: data.FileName, Date: data.LastModTime.Unix(), Size: data.FileSize, Type: wfs.GetType(data.FileName, data.IsDir())}
 
-	_, err = conn.Exec("INSERT INTO entity_edit(entity_id, content, modified, user_id) VALUES(?, ?, ?, ?)", data.ID, data.Content, data.LastModTime, User.Root)
+	// get previous version
+	var older db.DBFile
+	err = conn.Get(&older, "SELECT content, max(modified) AS modified FROM entity_edit WHERE entity_id = ? GROUP BY content", data.ID)
+
+	_, err = conn.Exec("INSERT INTO entity_edit(entity_id, content, modified, user_id, previous) VALUES(?, ?, ?, ?, ?)", data.ID, data.Content, data.LastModTime, User.Root, older.Content)
 
 	if err != nil {
+		log.Println(err)
 		return out, err
 	}
 
