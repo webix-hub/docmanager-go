@@ -407,7 +407,7 @@ func saveVersion(sql string, args ...interface{}) (*wfs.File, error) {
 
 	// get previous version
 	var older db.DBFile
-	err = conn.Get(&older, "SELECT content, max(modified) AS modified FROM entity_edit WHERE entity_id = ? GROUP BY content", data.ID)
+	err = conn.Get(&older, "select content from entity_edit where entity_id = ? order by modified desc limit 1;", data.ID)
 
 	_, err = conn.Exec("INSERT INTO entity_edit(entity_id, content, modified, user_id, previous) VALUES(?, ?, ?, ?, ?)", data.ID, data.Content, data.LastModTime, User.Root, older.Content)
 
