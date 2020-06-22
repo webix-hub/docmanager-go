@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 type TagInfo struct {
@@ -205,11 +207,60 @@ func addExtrasRoutes(r chi.Router) {
 		mode := chi.URLParam(r, "mode")
 		if mode == "text" {
 			w.Header().Add("Content-type", "text/plain")
+
+			var previous string
+			conn.Get(&previous, "SELECT previous FROM entity_edit WHERE id = ?", id)
+			if previous != "" {
+				text1, text2 := getTextFromFiles(filepath.Join(Config.DataFolder, previous), filepath.Join(Config.DataFolder, content))
+				dmp := diffmatchpatch.New()
+				diffs := dmp.DiffMain(text1, text2, false)
+				response := dmp.DiffPrettyText(diffs)
+
+				io.WriteString(w, response)
+				return
+			}
+
 			io.Copy(w, data)
+
 		} else if mode == "binary" {
 			disposition := "inline"
 			w.Header().Set("Content-Disposition", disposition+"; filename=\""+content+"\"")
 			http.ServeContent(w, r, "", time.Now(), data)
 		}
 	})
+
+	r.Post("/versions", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		id := r.Form.Get("id")
+		version := r.Form.Get("version")
+
+		var content string
+		conn.Get(&content, "SELECT content FROM entity_edit WHERE id = ?", version)
+		file, err := os.Open(filepath.Join(Config.DataFolder, content))
+		if err != nil {
+			panic(errors.New("Can't open file for reading"))
+		}
+
+		err = drive.Write(id, file)
+		if err != nil {
+			panic(err)
+		}
+
+		info, _ := saveVersion("select entity.* from entity where path = ?", id)
+
+		format.JSON(w, 200, info)
+	})
+}
+
+func getTextFromFiles(path1, path2 string) (string, string) {
+	d1, err := ioutil.ReadFile(path1)
+	if err != nil {
+		panic(err)
+	}
+	d2, err := ioutil.ReadFile(path2)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(d1), string(d2)
 }
