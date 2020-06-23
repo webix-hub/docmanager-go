@@ -58,7 +58,10 @@ func addTrashRoutes(r chi.Router) {
 		}
 
 		deletedPath := obj.Path[1:]
-		restorePath := path.Dir(obj.Path[1:])
+		restorePath := r.Form.Get("target")
+		if restorePath == "" {
+			restorePath = path.Dir(obj.Path[1:])
+		}
 		// check restore folder
 		newRoot := 0
 		conn.Get(&newRoot, "SELECT id FROM entity WHERE path = ? AND tree = ?", restorePath, User.Root)

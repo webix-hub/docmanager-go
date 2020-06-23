@@ -14,6 +14,7 @@ type TagInfo struct {
 	ID    int    `json:"id"`
 	Name  string `json:"name"`
 	Value string `json:"value"`
+	Color string `json:"color"`
 }
 
 type UserInfo struct {
@@ -45,7 +46,7 @@ func dbID(id string) (res int) {
 func addExtrasRoutes(r chi.Router) {
 	r.Get("/tags/all", func(w http.ResponseWriter, r *http.Request) {
 		info := make([]TagInfo, 0)
-		conn.Select(&info, "select id, name, value from tag")
+		conn.Select(&info, "select id, name, value, color from tag")
 
 		format.JSON(w, 200, info)
 	})
@@ -70,6 +71,39 @@ func addExtrasRoutes(r chi.Router) {
 		for _, tag := range tags {
 			conn.Exec("insert into entity_tag(entity_id, tag_id) VALUES(?, ?)", did, tag)
 		}
+
+		format.JSON(w, 200, Response{ID: id})
+	})
+
+	r.Post("/tags", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		name := r.Form.Get("name")
+		color := r.Form.Get("color")
+		value := strings.ReplaceAll(name, " ", "")
+
+		res, _ := conn.Exec("INSERT INTO tag (name, value, color) VALUES (?, ?, ?)", name, value, color)
+
+		tid, _ := res.LastInsertId()
+		format.JSON(w, 200, TagInfo{ID: int(tid), Name: name, Value: value, Color: color})
+	})
+
+	r.Put("/tags/{id}", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		id := chi.URLParam(r, "id")
+		name := r.Form.Get("name")
+		color := r.Form.Get("color")
+		value := strings.ReplaceAll(name, " ", "")
+
+		conn.Exec("UPDATE tag SET name = ?, value = ?, color = ? WHERE id = ?", name, value, color, id)
+		tid, _ := strconv.Atoi(id)
+		format.JSON(w, 200, TagInfo{ID: tid, Name: name, Value: value, Color: color})
+	})
+
+	r.Delete("/tags/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+
+		conn.Exec("DELETE FROM tag WHERE id = ?", id)
+		conn.Exec("DELETE FROM entity_tag WHERE tag_id = ?", id)
 
 		format.JSON(w, 200, Response{ID: id})
 	})
