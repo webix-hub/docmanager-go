@@ -193,14 +193,17 @@ func addExtrasRoutes(r chi.Router) {
 		format.JSON(w, 200, versions)
 	})
 
-	r.Get("/versions/{mode}/{id}", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/versions/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
+		_, diff := r.URL.Query()["diff"]
 
 		var content, previous string
 		conn.Get(&content, "SELECT content FROM entity_edit WHERE id = ?", id)
-		conn.Get(&previous, "SELECT previous FROM entity_edit WHERE id = ?", id)
+		if diff {
+			conn.Get(&previous, "SELECT previous FROM entity_edit WHERE id = ?", id)
+		}
 
-		mode := chi.URLParam(r, "mode")
+		mode := r.URL.Query().Get("mode")
 		if mode == "text" {
 			w.Header().Add("Content-type", "text/plain")
 			text2 := getTextFromFile(filepath.Join(Config.DataFolder, content))
