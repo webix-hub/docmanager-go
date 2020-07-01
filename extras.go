@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"html"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -218,7 +219,7 @@ func addExtrasRoutes(r chi.Router) {
 				return
 			}
 
-			io.WriteString(w, text2)
+			io.WriteString(w, html.EscapeString(text2))
 
 		} else if mode == "binary" {
 			data, err := os.Open(filepath.Join(Config.DataFolder, content))
