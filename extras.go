@@ -196,33 +196,32 @@ func addExtrasRoutes(r chi.Router) {
 	r.Get("/versions/{mode}/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 
-		var content string
+		var content, previous string
 		conn.Get(&content, "SELECT content FROM entity_edit WHERE id = ?", id)
-
-		data, err := os.Open(filepath.Join(Config.DataFolder, content))
-		if err != nil {
-			panic(errors.New("Can't open file for reading"))
-		}
+		conn.Get(&previous, "SELECT previous FROM entity_edit WHERE id = ?", id)
 
 		mode := chi.URLParam(r, "mode")
 		if mode == "text" {
 			w.Header().Add("Content-type", "text/plain")
+			text2 := getTextFromFile(filepath.Join(Config.DataFolder, content))
 
-			var previous string
-			conn.Get(&previous, "SELECT previous FROM entity_edit WHERE id = ?", id)
 			if previous != "" {
-				text1, text2 := getTextFromFiles(filepath.Join(Config.DataFolder, previous), filepath.Join(Config.DataFolder, content))
+				text1 := getTextFromFile(filepath.Join(Config.DataFolder, previous))
 				dmp := diffmatchpatch.New()
 				diffs := dmp.DiffMain(text1, text2, false)
-				response := dmp.DiffPrettyText(diffs)
+				response := dmp.DiffPrettyHtml(diffs)
 
 				io.WriteString(w, response)
 				return
 			}
 
-			io.Copy(w, data)
+			io.WriteString(w, text2)
 
 		} else if mode == "binary" {
+			data, err := os.Open(filepath.Join(Config.DataFolder, content))
+			if err != nil {
+				panic(errors.New("Can't open file for reading"))
+			}
 			disposition := "inline"
 			w.Header().Set("Content-Disposition", disposition+"; filename=\""+content+"\"")
 			http.ServeContent(w, r, "", time.Now(), data)
@@ -252,15 +251,11 @@ func addExtrasRoutes(r chi.Router) {
 	})
 }
 
-func getTextFromFiles(path1, path2 string) (string, string) {
-	d1, err := ioutil.ReadFile(path1)
-	if err != nil {
-		panic(err)
-	}
-	d2, err := ioutil.ReadFile(path2)
+func getTextFromFile(path string) string {
+	d, err := ioutil.ReadFile(path)
 	if err != nil {
 		panic(err)
 	}
 
-	return string(d1), string(d2)
+	return string(d)
 }
