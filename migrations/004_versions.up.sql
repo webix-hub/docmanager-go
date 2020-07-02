@@ -4,6 +4,7 @@ create table entity_edit
     entity_id   int                         not null,
     content     varchar(32) default ''      not null,
     modified    datetime    default now()   not null,
+    origin      datetime                    not null,
     user_id     int                         not null,
     previous    varchar(32) default ''      not null
 );

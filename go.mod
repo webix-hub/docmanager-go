@@ -19,4 +19,4 @@ require (
 	golang.org/x/net v0.0.0-20200319234117-63522dbf7eec // indirect
 )
 
-replace github.com/sergi/go-diff => github.com/kullias/go-diff v1.1.1-0.20200701111408-ad5742b32d97
+replace github.com/sergi/go-diff => github.com/kullias/go-diff v1.1.1-0.20200702084843-10aae2621414

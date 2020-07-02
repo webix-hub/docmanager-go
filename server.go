@@ -315,7 +315,7 @@ func main() {
 			panic(err)
 		}
 
-		info, _ := saveVersion("select entity.* from entity where path = ?", id)
+		info, _ := saveVersion(id, time.Time{})
 
 		format.JSON(w, 200, info)
 	})
@@ -391,14 +391,14 @@ func handleUpload(w http.ResponseWriter, r *http.Request, makeNew bool) {
 		return
 	}
 
-	info, err := saveVersion("select entity.* from entity where path = ?", fileID)
+	info, err := saveVersion(fileID, time.Time{})
 	format.JSON(w, 200, info)
 }
 
-func saveVersion(sql string, args ...interface{}) (*wfs.File, error) {
+func saveVersion(id string, restore time.Time) (*wfs.File, error) {
 	var data db.DBFile
 
-	err := conn.Get(&data, sql, args...)
+	err := conn.Get(&data, "select entity.* from entity where path = ?", id)
 	if err != nil {
 		return nil, err
 	}
@@ -409,7 +409,12 @@ func saveVersion(sql string, args ...interface{}) (*wfs.File, error) {
 	var older db.DBFile
 	err = conn.Get(&older, "select content from entity_edit where entity_id = ? order by modified desc limit 1;", data.ID)
 
-	_, err = conn.Exec("INSERT INTO entity_edit(entity_id, content, modified, user_id, previous) VALUES(?, ?, ?, ?, ?)", data.ID, data.Content, data.LastModTime, User.Root, older.Content)
+	// sql does not allow zero dates by default
+	if restore.IsZero() {
+		restore = restore.Add(time.Second * 1)
+	}
+
+	_, err = conn.Exec("INSERT INTO entity_edit(entity_id, content, modified, user_id, previous, origin) VALUES(?, ?, ?, ?, ?, ?)", data.ID, data.Content, data.LastModTime, User.Root, older.Content, restore)
 
 	if err != nil {
 		log.Println(err)

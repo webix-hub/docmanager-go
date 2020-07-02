@@ -45,6 +45,8 @@ type EditInfo struct {
 	ID       int       `json:"id"`
 	Modified time.Time `json:"date"`
 	User     int       `db:"user_id" json:"user"`
+	Content  string    `json:"content"`
+	Origin   time.Time `json:"origin"`
 }
 
 var User = CurrentUser{1, 1}
@@ -189,7 +191,10 @@ func addExtrasRoutes(r chi.Router) {
 		did := dbID(id)
 
 		versions := make([]EditInfo, 0)
-		conn.Select(&versions, "SELECT id,modified,user_id FROM entity_edit WHERE entity_id = ? ORDER BY modified desc", did)
+		err := conn.Select(&versions, "SELECT id,modified,user_id,origin FROM entity_edit WHERE entity_id = ? ORDER BY modified desc", did)
+		if err != nil {
+			panic(err)
+		}
 
 		format.JSON(w, 200, versions)
 	})
@@ -237,9 +242,10 @@ func addExtrasRoutes(r chi.Router) {
 		id := r.Form.Get("id")
 		version := r.Form.Get("version")
 
-		var content string
-		conn.Get(&content, "SELECT content FROM entity_edit WHERE id = ?", version)
-		file, err := os.Open(filepath.Join(Config.DataFolder, content))
+		var edit EditInfo
+		conn.Get(&edit, "SELECT content, modified FROM entity_edit WHERE id = ?", version)
+
+		file, err := os.Open(filepath.Join(Config.DataFolder, edit.Content))
 		if err != nil {
 			panic(errors.New("Can't open file for reading"))
 		}
@@ -249,7 +255,7 @@ func addExtrasRoutes(r chi.Router) {
 			panic(err)
 		}
 
-		info, _ := saveVersion("select entity.* from entity where path = ?", id)
+		info, _ := saveVersion(id, edit.Modified)
 
 		format.JSON(w, 200, info)
 	})
