@@ -46,6 +46,7 @@ var features = FSFeatures{
 
 type AppConfig struct {
 	DataFolder   string `default:"/tmp/docs"`
+	UserFolder   string `default:"./demodata/avatars"`
 	Port         string
 	Preview      string
 	UploadLimit  int64

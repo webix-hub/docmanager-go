@@ -5,6 +5,7 @@ import (
 	"html"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -129,7 +130,8 @@ func addExtrasRoutes(r chi.Router) {
 	})
 	r.Get("/users/{id}/avatar/{name}", func(w http.ResponseWriter, r *http.Request) {
 		name := chi.URLParam(r, "name")
-		http.ServeFile(w, r, filepath.Join(Config.DataFolder, "avatars", name))
+		log.Println(filepath.Join(Config.UserFolder, name))
+		http.ServeFile(w, r, filepath.Join(Config.UserFolder, name))
 	})
 
 	r.Post("/favorite", func(w http.ResponseWriter, r *http.Request) {
