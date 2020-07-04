@@ -1,7 +1,12 @@
 package main
 
 import (
+	"errors"
+	"html"
+	"io"
+	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -34,6 +39,14 @@ type CommentInfo struct {
 type CurrentUser struct {
 	ID   int
 	Root int
+}
+
+type EditInfo struct {
+	ID       int        `json:"id"`
+	Modified time.Time  `json:"date"`
+	User     int        `db:"user_id" json:"user"`
+	Content  string     `json:"content"`
+	Origin   *time.Time `json:"origin"`
 }
 
 var User = CurrentUser{1, 1}
@@ -205,4 +218,83 @@ func addExtrasRoutes(r chi.Router) {
 		conn.Exec("delete from comment WHERE id = ?", id)
 		format.JSON(w, 200, Response{ID: id})
 	})
+
+	r.Get("/versions", func(w http.ResponseWriter, r *http.Request) {
+		id := r.URL.Query().Get("id")
+		did := dbID(id)
+
+		versions := make([]EditInfo, 0)
+		err := conn.Select(&versions, "SELECT id,modified,user_id,origin FROM entity_edit WHERE entity_id = ? ORDER BY modified desc", did)
+		if err != nil {
+			panic(err)
+		}
+
+		format.JSON(w, 200, versions)
+	})
+
+	r.Get("/versions/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		_, diff := r.URL.Query()["diff"]
+
+		var content, previous string
+		conn.Get(&content, "SELECT content FROM entity_edit WHERE id = ?", id)
+		if diff {
+			conn.Get(&previous, "SELECT previous FROM entity_edit WHERE id = ?", id)
+		}
+
+		mode := r.URL.Query().Get("mode")
+		if mode == "text" {
+			w.Header().Add("Content-type", "text/plain")
+			text2 := getTextFromFile(filepath.Join(Config.DataFolder, content))
+
+			if previous != "" {
+				text1 := getTextFromFile(filepath.Join(Config.DataFolder, previous))
+				io.WriteString(w, diffHTML(text1, text2))
+				return
+			}
+
+			io.WriteString(w, html.EscapeString(text2))
+
+		} else if mode == "binary" {
+			data, err := os.Open(filepath.Join(Config.DataFolder, content))
+			if err != nil {
+				panic(errors.New("Can't open file for reading"))
+			}
+			disposition := "inline"
+			w.Header().Set("Content-Disposition", disposition+"; filename=\""+content+"\"")
+			http.ServeContent(w, r, "", time.Now(), data)
+		}
+	})
+
+	r.Post("/versions", func(w http.ResponseWriter, r *http.Request) {
+		r.ParseForm()
+		id := r.Form.Get("id")
+		version := r.Form.Get("version")
+
+		var edit EditInfo
+		conn.Get(&edit, "SELECT content, modified FROM entity_edit WHERE id = ?", version)
+
+		file, err := os.Open(filepath.Join(Config.DataFolder, edit.Content))
+		if err != nil {
+			panic(errors.New("Can't open file for reading"))
+		}
+
+		err = drive.Write(id, file)
+		if err != nil {
+			panic(err)
+		}
+
+		info, _ := saveVersion(id, &edit.Modified)
+
+		format.JSON(w, 200, info)
+	})
+}
+
+func getTextFromFile(path string) string {
+	d, err := ioutil.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(d)
 }

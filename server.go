@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"wfs-ls/demodata"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -44,11 +45,12 @@ var features = FSFeatures{
 }
 
 type AppConfig struct {
-	DataFolder  string `default:"/tmp/docs"`
-	Port        string
-	Preview     string
-	UploadLimit int64
-	Readonly    bool
+	DataFolder   string `default:"/tmp/docs"`
+	Port         string
+	Preview      string
+	UploadLimit  int64
+	Readonly     bool
+	ResetOnStart bool
 
 	DB DBConfig
 }
@@ -66,6 +68,7 @@ var Config AppConfig
 func main() {
 	flag.StringVar(&Config.DataFolder, "data", "", "location of data folder")
 	flag.StringVar(&Config.Preview, "preview", "", "url of preview generation service")
+	flag.BoolVar(&Config.ResetOnStart, "reset", false, "reset data in DB")
 	flag.BoolVar(&Config.Readonly, "readonly", false, "readonly mode")
 	flag.Int64Var(&Config.UploadLimit, "limit", 10_000_000, "max file size to upload")
 	flag.StringVar(&Config.Port, "port", ":3200", "port for web server")
@@ -99,12 +102,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	migration(conn)
 
 	os.Mkdir(Config.DataFolder, 0777)
 	drive, err = db.NewDBDrive(conn, Config.DataFolder, "entity", User.Root, &driveConfig)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if Config.ResetOnStart {
+		demodata.ResetDemoData(drive, conn)
 	}
 
 	r := chi.NewRouter()
@@ -300,12 +308,12 @@ func main() {
 			panic("id not provided")
 		}
 
-		err := drive.Write(id, strings.NewReader(content))
+		err = drive.Write(id, strings.NewReader(content))
 		if err != nil {
 			panic(err)
 		}
 
-		info, _ := drive.Info(id)
+		info, _ := saveVersion(id, nil)
 
 		format.JSON(w, 200, info)
 	})
@@ -381,6 +389,31 @@ func handleUpload(w http.ResponseWriter, r *http.Request, makeNew bool) {
 		return
 	}
 
-	info, err := drive.Info(fileID)
+	info, err := saveVersion(fileID, nil)
 	format.JSON(w, 200, info)
+}
+
+func saveVersion(id string, restore *time.Time) (*wfs.File, error) {
+	var data db.DBFile
+
+	err := conn.Get(&data, "select entity.* from entity where path = ?", id)
+	if err != nil {
+		return nil, err
+	}
+
+	out := &wfs.File{ID: data.Path, Name: data.FileName, Date: data.LastModTime.Unix(), Size: data.FileSize, Type: wfs.GetType(data.FileName, data.IsDir())}
+
+	// get previous version
+	var older db.DBFile
+	err = conn.Get(&older, "select content from entity_edit where entity_id = ? order by modified desc limit 1;", data.ID)
+
+	// write new edit version
+	_, err = conn.Exec("INSERT INTO entity_edit(entity_id, content, modified, user_id, previous, origin) VALUES(?, ?, ?, ?, ?, ?)", data.ID, data.Content, data.LastModTime, User.Root, older.Content, restore)
+
+	if err != nil {
+		log.Println(err)
+		return out, err
+	}
+
+	return out, nil
 }
