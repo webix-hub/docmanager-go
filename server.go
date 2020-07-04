@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"wfs-ls/demodata"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -44,11 +45,12 @@ var features = FSFeatures{
 }
 
 type AppConfig struct {
-	DataFolder  string `default:"/tmp/docs"`
-	Port        string
-	Preview     string
-	UploadLimit int64
-	Readonly    bool
+	DataFolder   string `default:"/tmp/docs"`
+	Port         string
+	Preview      string
+	UploadLimit  int64
+	Readonly     bool
+	ResetOnStart bool
 
 	DB DBConfig
 }
@@ -63,19 +65,10 @@ type DBConfig struct {
 
 var Config AppConfig
 
-type Edit struct {
-	Name    string `json:"value"`
-	ID      string `json:"id"`
-	Size    int64  `json:"size"`
-	Date    int64  `json:"date"`
-	Type    string `json:"type"`
-	Content string `json:"content"`
-	Origin  int64  `json:"origin"`
-}
-
 func main() {
 	flag.StringVar(&Config.DataFolder, "data", "", "location of data folder")
 	flag.StringVar(&Config.Preview, "preview", "", "url of preview generation service")
+	flag.BoolVar(&Config.ResetOnStart, "reset", false, "reset data in DB")
 	flag.BoolVar(&Config.Readonly, "readonly", false, "readonly mode")
 	flag.Int64Var(&Config.UploadLimit, "limit", 10_000_000, "max file size to upload")
 	flag.StringVar(&Config.Port, "port", ":3200", "port for web server")
@@ -109,12 +102,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	migration(conn)
 
 	os.Mkdir(Config.DataFolder, 0777)
 	drive, err = db.NewDBDrive(conn, Config.DataFolder, "entity", User.Root, &driveConfig)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if Config.ResetOnStart {
+		demodata.ResetDemoData(drive, conn)
 	}
 
 	r := chi.NewRouter()
@@ -315,7 +313,7 @@ func main() {
 			panic(err)
 		}
 
-		info, _ := saveVersion(id, time.Time{})
+		info, _ := saveVersion(id, nil)
 
 		format.JSON(w, 200, info)
 	})
@@ -391,11 +389,11 @@ func handleUpload(w http.ResponseWriter, r *http.Request, makeNew bool) {
 		return
 	}
 
-	info, err := saveVersion(fileID, time.Time{})
+	info, err := saveVersion(fileID, nil)
 	format.JSON(w, 200, info)
 }
 
-func saveVersion(id string, restore time.Time) (*wfs.File, error) {
+func saveVersion(id string, restore *time.Time) (*wfs.File, error) {
 	var data db.DBFile
 
 	err := conn.Get(&data, "select entity.* from entity where path = ?", id)
@@ -409,11 +407,7 @@ func saveVersion(id string, restore time.Time) (*wfs.File, error) {
 	var older db.DBFile
 	err = conn.Get(&older, "select content from entity_edit where entity_id = ? order by modified desc limit 1;", data.ID)
 
-	// sql does not allow zero dates by default
-	if restore.IsZero() {
-		restore = restore.Add(time.Second * 1)
-	}
-
+	// write new edit version
 	_, err = conn.Exec("INSERT INTO entity_edit(entity_id, content, modified, user_id, previous, origin) VALUES(?, ?, ?, ?, ?, ?)", data.ID, data.Content, data.LastModTime, User.Root, older.Content, restore)
 
 	if err != nil {

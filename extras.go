@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi"
-	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 type TagInfo struct {
@@ -43,11 +42,11 @@ type CurrentUser struct {
 }
 
 type EditInfo struct {
-	ID       int       `json:"id"`
-	Modified time.Time `json:"date"`
-	User     int       `db:"user_id" json:"user"`
-	Content  string    `json:"content"`
-	Origin   time.Time `json:"origin"`
+	ID       int        `json:"id"`
+	Modified time.Time  `json:"date"`
+	User     int        `db:"user_id" json:"user"`
+	Content  string     `json:"content"`
+	Origin   *time.Time `json:"origin"`
 }
 
 var User = CurrentUser{1, 1}
@@ -250,11 +249,7 @@ func addExtrasRoutes(r chi.Router) {
 
 			if previous != "" {
 				text1 := getTextFromFile(filepath.Join(Config.DataFolder, previous))
-				dmp := diffmatchpatch.New()
-				diffs := dmp.DiffMain(text1, text2, false)
-				response := dmp.DiffPrettyHtml(diffs)
-
-				io.WriteString(w, response)
+				io.WriteString(w, diffHTML(text1, text2))
 				return
 			}
 
@@ -289,7 +284,7 @@ func addExtrasRoutes(r chi.Router) {
 			panic(err)
 		}
 
-		info, _ := saveVersion(id, edit.Modified)
+		info, _ := saveVersion(id, &edit.Modified)
 
 		format.JSON(w, 200, info)
 	})
