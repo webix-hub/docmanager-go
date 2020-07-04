@@ -63,7 +63,7 @@ func importDemoEntities(drive wfs.Drive, db *sqlx.DB) {
 	}
 
 	filepath.Walk(demoRoot, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
+		if err != nil || path == demoRoot {
 			return err
 		}
 

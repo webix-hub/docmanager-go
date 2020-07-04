@@ -90,7 +90,7 @@ func main() {
 
 	// common drive access
 	var err error
-	driveConfig := wfs.DriveConfig{Verbose: true}
+	driveConfig := wfs.DriveConfig{Verbose: false}
 	driveConfig.Operation = &wfs.OperationConfig{PreventNameCollision: true}
 	if Config.Readonly {
 		temp := wfs.Policy(&wfs.ReadOnlyPolicy{})
