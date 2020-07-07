@@ -57,6 +57,9 @@ func importDemoUsers(db *sqlx.DB) {
 }
 
 func importDemoEntities(drive wfs.Drive, db *sqlx.DB) {
+	// fs root
+	must(db.Exec("INSERT INTO entity (id, name, folder, type, tree, path) VALUES (1, '', 0, 2, 1, '/')"))
+
 	demoRoot, err := filepath.Abs("./demodata/files")
 	if err != nil {
 		return
