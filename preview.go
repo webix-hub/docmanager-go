@@ -44,6 +44,17 @@ func getFilePreview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := r.URL.Query().Get("id")
+
+	// ids from trashed will be number DB ids
+	var tid string
+	if id[:1] != "/" {
+		tid = "__trashed" + id
+		conn.Get(&id, "select path from entity where id=? and tree=?", id, User.Root)
+		if id[0:2] != "./" {
+			panic("wrong id provided")
+		}
+	}
+
 	info, err := drive.Info(id)
 	if err != nil {
 		format.Text(w, 500, "Access denied")
@@ -69,7 +80,7 @@ func getFilePreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	target := getImagePreviewName(Config.DataFolder, id, widthStr, heightStr)
+	target := getImagePreviewName(Config.DataFolder, id+tid, widthStr, heightStr)
 
 	// check previously generated preview
 	ext := ".jpg"
@@ -83,9 +94,10 @@ func getFilePreview(w http.ResponseWriter, r *http.Request) {
 			// there is a preview placeholder, which means preview can't be generated for this file
 			serveIconPreview(w, r, info)
 			return
-		} else {
-			http.ServeFile(w, r, target+ext)
 		}
+
+		http.ServeFile(w, r, target+ext)
+
 		return
 	}
 
