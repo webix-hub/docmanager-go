@@ -18,6 +18,8 @@ import (
 	"github.com/xbsoftware/wfs"
 )
 
+var nonLatin = regexp.MustCompile(("[[:^ascii:]]"))
+
 func getIconURL(size, ftype, name string) string {
 	var re = regexp.MustCompile(`[^A-Za-z0-9.]`)
 
@@ -114,7 +116,7 @@ func getFilePreview(w http.ResponseWriter, r *http.Request) {
 func getImagePreviewName(base, id, width, height string) string {
 	//folder := filepath.Join(base, filepath.Dir(id), ".preview")
 	os.Mkdir("/tmp/preview", 0777)
-	return filepath.Join("/tmp/preview", strings.Replace(id, "/", "___", -1))
+	return filepath.Join("/tmp/preview", width+"x"+height+"___"+strings.Replace(id, "/", "___", -1))
 	// return filepath.Join(folder, filepath.Base(id)+"___"+width+"x"+height)
 }
 func getImagePreview(source io.Reader, target, name string, width, height int) (string, error) {
@@ -139,6 +141,7 @@ func getExternalPreview(source io.ReadSeeker, target, name string, width, height
 	defer body.Close()
 
 	form := multipart.NewWriter(writer)
+	safeName := nonLatin.ReplaceAllLiteralString(name,"x")
 
 	go func() {
 		defer writer.Close()
@@ -163,9 +166,9 @@ func getExternalPreview(source io.ReadSeeker, target, name string, width, height
 			log.Println(err.Error())
 			return
 		}
-		io.Copy(fw, bytes.NewBufferString(name))
+		io.Copy(fw, bytes.NewBufferString(safeName))
 
-		fw, err = form.CreateFormFile("file", name)
+		fw, err = form.CreateFormFile("file", safeName)
 		if err != nil {
 			log.Println(err.Error())
 			return
