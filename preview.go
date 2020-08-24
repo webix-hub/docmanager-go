@@ -115,7 +115,10 @@ func getFilePreview(w http.ResponseWriter, r *http.Request) {
 
 func getImagePreviewName(base, id, width, height string) string {
 	//folder := filepath.Join(base, filepath.Dir(id), ".preview")
-	os.Mkdir("/tmp/preview", 0777)
+	err := os.MkdirAll("/tmp/preview", 0777)
+	if err != nil {
+		log.Println("Can't create folder for previews")
+	}
 	return filepath.Join("/tmp/preview", width+"x"+height+"___"+strings.Replace(id, "/", "___", -1))
 	// return filepath.Join(folder, filepath.Base(id)+"___"+width+"x"+height)
 }
