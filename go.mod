@@ -14,7 +14,7 @@ require (
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	github.com/sergi/go-diff v1.1.0
 	github.com/unrolled/render v1.0.2
-	github.com/xbsoftware/wfs v0.0.0-20200304115134-e605d8615890
+	github.com/xbsoftware/wfs v0.0.0-20200826093531-5710d5a7e63b
 	github.com/xbsoftware/wfs-db v0.0.0-20200304161452-662f70426b5e
 	golang.org/x/net v0.0.0-20200319234117-63522dbf7eec // indirect
 )
