@@ -78,8 +78,10 @@ func addTrashRoutes(r chi.Router) {
 			if fileUsed == 0 {
 				break
 			}
-			targetName += ".restored"
-			targetPath += ".restored"
+
+			ext := path.Ext(targetName)
+			targetName = makeUnique(targetName, ext, obj.Type)
+			targetPath = makeUnique(targetPath, ext, obj.Type)
 		}
 
 		// restore the object
@@ -150,4 +152,13 @@ func selectIdRec(folder int) []int {
 	}
 
 	return out
+}
+
+func makeUnique(name, ext string, ftype int) string {
+	if ftype == 2 || ext == "" {
+		return name + ".restored"
+	}
+
+	index := len(name) - len(ext)
+	return name[:index] + ".restored" + name[index:]
 }
