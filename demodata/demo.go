@@ -11,6 +11,10 @@ import (
 )
 
 func must(r sql.Result, e error) {
+	nonError(e)
+}
+
+func nonError(e error) {
 	if e != nil {
 		log.Fatal(e)
 	}
@@ -82,7 +86,7 @@ func importDemoEntities(drive wfs.Drive, db *sqlx.DB) {
 			id, _ := drive.Make(dir, name, false)
 
 			reader, _ := os.Open(path)
-			drive.Write(id, reader)
+			nonError(drive.Write(id, reader))
 			reader.Close()
 		}
 

@@ -8,7 +8,7 @@ create table entity
     modified datetime    default now()    not null,
     size     int         default 0  not null,
     tree     int                    not null,
-    path     varchar(2048)          not null
+    path     varchar(767)          not null
 );
 
 create index entity_path_index

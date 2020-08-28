@@ -360,7 +360,10 @@ func main() {
 	r.Get("/meta", getMetaInfo)
 
 	log.Printf("Starting webserver at port " + Config.Port)
-	http.ListenAndServe(Config.Port, r)
+	err = http.ListenAndServe(Config.Port, r)
+	if err != nil {
+		log.Println(err.Error())
+	}
 }
 
 func handleUpload(w http.ResponseWriter, r *http.Request, makeNew bool) {
