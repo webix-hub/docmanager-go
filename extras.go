@@ -95,7 +95,11 @@ func addExtrasRoutes(r chi.Router) {
 		color := r.Form.Get("color")
 		value := strings.ReplaceAll(name, " ", "")
 
-		res, _ := conn.Exec("INSERT INTO tag (name, value, color) VALUES (?, ?, ?)", name, value, color)
+		res, err := conn.Exec("INSERT INTO tag (name, value, color) VALUES (?, ?, ?)", name, value, color)
+		if err != nil {
+			format.Text(w, 500, err.Error())
+			return
+		}
 
 		tid, _ := res.LastInsertId()
 		format.JSON(w, 200, TagInfo{ID: int(tid), Name: name, Value: value, Color: color})
@@ -108,7 +112,12 @@ func addExtrasRoutes(r chi.Router) {
 		color := r.Form.Get("color")
 		value := strings.ReplaceAll(name, " ", "")
 
-		conn.Exec("UPDATE tag SET name = ?, value = ?, color = ? WHERE id = ?", name, value, color, id)
+		_, err := conn.Exec("UPDATE tag SET name = ?, value = ?, color = ? WHERE id = ?", name, value, color, id)
+		if err != nil {
+			format.Text(w, 500, err.Error())
+			return
+		}
+
 		tid, _ := strconv.Atoi(id)
 		format.JSON(w, 200, TagInfo{ID: tid, Name: name, Value: value, Color: color})
 	})
