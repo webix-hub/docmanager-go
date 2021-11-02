@@ -4,7 +4,7 @@ name: default
 steps:
 
 - name: backend
-  image: golang:1.13
+  image: golang:1.17
   environment:
     GOPROXY: https://goproxy.webix.io
   commands:
@@ -21,7 +21,7 @@ steps:
     registry: registry.webix.io
 
 - name: deploy
-  image: registry.webix.io/js-build-env
+  image: registry.webix.io/js-build-env:node-14
   environment:
     RESTART_HOOK_TOKEN:
       from_secret: restart_hook_token
