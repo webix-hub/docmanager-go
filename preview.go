@@ -85,9 +85,9 @@ func getFilePreview(w http.ResponseWriter, r *http.Request) {
 			// there is a preview placeholder, which means preview can't be generated for this file
 			serveIconPreview(w, r, info)
 			return
-		} else {
-			http.ServeFile(w, r, target+ext)
 		}
+
+		http.ServeFile(w, r, target+ext)
 		return
 	}
 
@@ -144,7 +144,7 @@ func getExternalPreview(source io.ReadSeeker, target, name string, width, height
 	defer body.Close()
 
 	form := multipart.NewWriter(writer)
-	safeName := nonLatin.ReplaceAllLiteralString(name,"x")
+	safeName := nonLatin.ReplaceAllLiteralString(name, "x")
 
 	go func() {
 		defer writer.Close()

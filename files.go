@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi"
@@ -39,7 +38,7 @@ func addFilesRoutes(r chi.Router) {
 			case "shared":
 				data, err = getFromQuery("select entity.* from entity inner join entity_user on entity.id = entity_user.entity_id where user_id = ? and tree = ? and path != \"/\" and left(path, 1) !=\".\" order by type desc, name asc", User.ID, User.Root)
 			case "trash":
-				data, err = getFromTrashQuery("select entity.* from entity where left(path,1) = \".\" AND tree = ? AND folder = -1 order by type desc, name asc", User.Root)
+				data, err = getFromQuery("select entity.* from entity where left(path,1) = \".\" AND tree = ? AND folder = -1 order by type desc, name asc", User.Root)
 			}
 		} else {
 			search := r.URL.Query().Get("search")
@@ -94,22 +93,6 @@ func addFilesRoutes(r chi.Router) {
 type UserShare struct {
 	UserID     int    `db:"user_id"`
 	EntityPath string `db:"path"`
-}
-
-func getFromTrashQuery(sql string, args ...interface{}) ([]wfs.File, error) {
-	data := make([]db.DBFile, 0)
-
-	err := conn.Select(&data, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	out := make([]wfs.File, len(data))
-	for i, d := range data {
-		out[i] = wfs.File{ID: strconv.Itoa(d.ID), Name: d.FileName, Date: d.LastModTime.Unix(), Size: d.FileSize, Type: wfs.GetType(d.FileName, d.IsDir())}
-	}
-
-	return out, nil
 }
 
 func getFromQuery(sql string, args ...interface{}) ([]wfs.File, error) {

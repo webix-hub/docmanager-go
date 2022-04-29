@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"path"
+	"strconv"
 
 	"github.com/go-chi/chi"
 	"github.com/jmoiron/sqlx"
@@ -23,7 +24,8 @@ func addTrashRoutes(r chi.Router) {
 			return
 		}
 
-		_, err = conn.Exec("update entity set path = ?, folder = -1 where path = ? AND tree = ?", "."+id, id, User.Root)
+		did := dbID(id)
+		_, err = conn.Exec("update entity set path = ?, folder = -1 where path = ? AND tree = ?", "./"+strconv.Itoa(did)+id, id, User.Root)
 		if err != nil {
 			format.JSON(w, 500, Response{Invalid: true, Error: err.Error()})
 			return
@@ -44,10 +46,13 @@ func addTrashRoutes(r chi.Router) {
 	r.Put("/delete", func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 		id := r.Form.Get("id")
+		if id[0:2] != "./" {
+			panic("wrong id provided")
+		}
 
 		obj := db.DBFile{}
-		conn.Get(&obj, "select * from entity where id=? and tree=?", id, User.Root)
-		if obj.ID == 0 || obj.Path[0:2] != "./" {
+		conn.Get(&obj, "select * from entity where path=? and tree=?", id, User.Root)
+		if obj.ID == 0 {
 			panic("wrong id provided")
 		}
 
@@ -57,10 +62,11 @@ func addTrashRoutes(r chi.Router) {
 			ids = append(ids, selectIdRec(obj.ID)...)
 		}
 
-		deletedPath := obj.Path[1:]
+		prefixLen := len("./" + strconv.Itoa(obj.ID))
+		deletedPath := obj.Path[prefixLen:]
 		restorePath := r.Form.Get("target")
 		if restorePath == "" {
-			restorePath = path.Dir(obj.Path[1:])
+			restorePath = path.Dir(deletedPath)
 		}
 		// check restore folder
 		newRoot := 0
@@ -70,7 +76,8 @@ func addTrashRoutes(r chi.Router) {
 		}
 
 		targetName := obj.FileName
-		targetPath := path.Join(restorePath, path.Base(obj.Path[1:]))
+		targetPath := path.Join(restorePath, path.Base(deletedPath))
+
 		// ensure that file name is not occupied
 		for {
 			fileUsed := 0
@@ -85,7 +92,7 @@ func addTrashRoutes(r chi.Router) {
 		}
 
 		// restore the object
-		_, err := conn.Exec("UPDATE entity set name = ?, path = ?, folder = ? where id = ? AND tree = ?", targetName, targetPath, newRoot, id, User.Root)
+		_, err := conn.Exec("UPDATE entity set name = ?, path = ?, folder = ? where path = ? AND tree = ?", targetName, targetPath, newRoot, id, User.Root)
 		if err != nil {
 			format.JSON(w, 500, Response{Invalid: true, Error: err.Error()})
 			return
@@ -107,10 +114,13 @@ func addTrashRoutes(r chi.Router) {
 
 	r.Delete("/delete", func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("id")
+		if id[0:2] != "./" {
+			panic("wrong id provided")
+		}
 		obj := db.DBFile{}
 
-		conn.Get(&obj, "select * from entity where id=? and tree=?", id, User.Root)
-		if obj.ID == 0 || obj.Path[0:2] != "./" {
+		conn.Get(&obj, "select * from entity where path=? and tree=?", id, User.Root)
+		if obj.ID == 0 {
 			panic("wrong id provided")
 		}
 
