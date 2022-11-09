@@ -138,7 +138,7 @@ func main() {
 		name := chi.URLParam(r, "name")
 		ftype := chi.URLParam(r, "type")
 
-		http.ServeFile(w, r, getIconURL(size, ftype, name, "none"))
+		http.ServeFile(w, r, getIconURL(size, ftype, name, ""))
 	})
 
 	r.Get("/icons/{skin}/{size}/{type}/{name}", func(w http.ResponseWriter, r *http.Request) {
